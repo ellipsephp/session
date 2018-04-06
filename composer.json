@@ -32,7 +32,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Ellipse\\Session\\": "src"
+            "Ellipse\\": "src"
         }
     }
 }
