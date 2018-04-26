@@ -17,7 +17,8 @@ use Ellipse\Session\Exceptions\SessionAlreadyStartedException;
 class SessionMiddleware implements MiddlewareInterface
 {
     /**
-     * Session options disabling php session cookie handling.
+     * Session options disabling automatic php session cookie management when
+     * calling session_start().
      *
      * @var array
      */
@@ -29,7 +30,7 @@ class SessionMiddleware implements MiddlewareInterface
     ];
 
     /**
-     * The date format for the session headers date.
+     * The date format for the session headers.
      *
      * @var string
      */
@@ -43,89 +44,89 @@ class SessionMiddleware implements MiddlewareInterface
     const EXPIRED = 'Thu, 19 Nov 1981 08:52:00 GMT';
 
     /**
-     * The session handler.
+     * The user defined session save handler.
      *
      * @var \SessionHandlerInterface|null
      */
-    private $handler;
+    private $save_handler;
 
     /**
-     * The session name.
+     * The user defined session name.
      *
      * @var string|null
      */
     private $name;
 
     /**
-     * The session save path.
+     * The user defined session save path.
      *
      * @var string|null
      */
     private $save_path;
 
     /**
-     * The session cache limiter.
+     * The user defined session cache limiter.
      *
      * @var string|null
      */
     private $cache_limiter;
 
     /**
-     * The session cache expire.
+     * The user defined session cache expire.
      *
      * @var int|null
      */
     private $cache_expire;
 
     /**
-     * The session cookie options.
+     * The user defined session cookie params.
      *
      * @var array
      */
-    private $options;
+    private $cookie_params;
 
     /**
-     * Set up a session middleware with optional session handler, name, save
-     * path, cache limiter, cache expire and cookie options.
+     * Set up a session middleware with optional session save handler, name,
+     * save path, cache limiter, cache expire and cookie params.
      *
-     * @param \SessionHandlerInterface  $handler
+     * @param \SessionHandlerInterface  $save_handler
      * @param string                    $name
      * @param string                    $save_path
      * @param string                    $cache_limiter
      * @param int                       $cache_expire
-     * @param array                     $options
+     * @param array                     $cookie_params
      */
     public function __construct(
-        SessionHandlerInterface $handler,
+        SessionHandlerInterface $save_handler = null,
         string $name = null,
         string $save_path = null,
         string $cache_limiter = null,
         int $cache_expire = null,
-        array $options = []
+        array $cookie_params = []
     ) {
-        $this->handler = $handler;
+        $this->save_handler = $save_handler;
         $this->name = $name;
         $this->save_path = $save_path;
         $this->cache_limiter = $cache_limiter;
         $this->cache_expire = $cache_expire;
-        $this->options = $options;
+        $this->cookie_params = $cookie_params;
     }
 
     /**
-     * Return a new session middleware using the given session handler.
+     * Return a new session middleware using the given session save handler.
      *
-     * @param \SessionHandlerInterface $handler
+     * @param \SessionHandlerInterface $save_handler
      * @return \Ellipse\Session\SessionMiddleware
      */
-    public function withHandler(SessionHandlerInterface $handler)
+    public function withSaveHandler(SessionHandlerInterface $save_handler): SessionMiddleware
     {
         return new SessionMiddleware(
-            $handler,
+            $save_handler,
             $this->name,
             $this->save_path,
             $this->cache_limiter,
             $this->cache_expire,
-            $this->options
+            $this->cookie_params
         );
     }
 
@@ -135,15 +136,15 @@ class SessionMiddleware implements MiddlewareInterface
      * @param string $name
      * @return \Ellipse\Session\SessionMiddleware
      */
-    public function withName(string $name)
+    public function withName(string $name): SessionMiddleware
     {
         return new SessionMiddleware(
-            $this->handler,
+            $this->save_handler,
             $name,
             $this->save_path,
             $this->cache_limiter,
             $this->cache_expire,
-            $this->options
+            $this->cookie_params
         );
     }
 
@@ -153,15 +154,15 @@ class SessionMiddleware implements MiddlewareInterface
      * @param string $save_path
      * @return \Ellipse\Session\SessionMiddleware
      */
-    public function withSavePath(string $save_path)
+    public function withSavePath(string $save_path): SessionMiddleware
     {
         return new SessionMiddleware(
-            $this->handler,
+            $this->save_handler,
             $this->name,
             $save_path,
             $this->cache_limiter,
             $this->cache_expire,
-            $this->options
+            $this->cookie_params
         );
     }
 
@@ -171,51 +172,51 @@ class SessionMiddleware implements MiddlewareInterface
      * @param string $cache_limiter
      * @return \Ellipse\Session\SessionMiddleware
      */
-    public function withCacheLimiter(string $cache_limiter)
+    public function withCacheLimiter(string $cache_limiter): SessionMiddleware
     {
         return new SessionMiddleware(
-            $this->handler,
+            $this->save_handler,
             $this->name,
             $this->save_path,
             $cache_limiter,
             $this->cache_expire,
-            $this->options
+            $this->cookie_params
         );
     }
 
     /**
      * Return a new session middleware using the given session cache expire.
      *
-     * @param string $cache_expire
+     * @param int $cache_expire
      * @return \Ellipse\Session\SessionMiddleware
      */
-    public function withCacheExpire(string $cache_expire)
+    public function withCacheExpire(int $cache_expire): SessionMiddleware
     {
         return new SessionMiddleware(
-            $this->handler,
+            $this->save_handler,
             $this->name,
             $this->save_path,
             $this->cache_limiter,
             $cache_expire,
-            $this->options
+            $this->cookie_params
         );
     }
 
     /**
-     * Return a new session middleware using the given session cookie options.
+     * Return a new session middleware using the given session cookie params.
      *
-     * @param array $options
+     * @param array $cookie_params
      * @return \Ellipse\Session\SessionMiddleware
      */
-    public function withCookieOptions(array $options)
+    public function withCookieParams(array $cookie_params): SessionMiddleware
     {
         return new SessionMiddleware(
-            $this->handler,
+            $this->save_handler,
             $this->name,
             $this->save_path,
             $this->cache_limiter,
             $this->cache_expire,
-            $options
+            $cookie_params
         );
     }
 
@@ -245,18 +246,20 @@ class SessionMiddleware implements MiddlewareInterface
 
         }
 
-        // Retrieve a session id from the request.
-        $id = $this->extractSessionId($request);
-
-        // Set the session configuration values.
-        session_id($id);
-
-        if (! is_null($this->handler)) session_set_save_handler($this->handler);
+        // Set the user defined session parameters.
+        if (! is_null($this->save_handler)) session_set_save_handler($this->save_handler);
         if (! is_null($this->name)) session_name($this->name);
         if (! is_null($this->save_path)) session_save_path($this->save_path);
         if (! is_null($this->cache_limiter)) session_cache_limiter($this->cache_limiter);
         if (! is_null($this->cache_expire)) session_cache_expire($this->cache_expire);
-        if ($this->options != []) $this->setCookieOptions($this->options);
+        if ($this->cookie_params != []) $this->setCookieParams($this->cookie_params);
+
+        // Set the session id.
+        $name = session_name();
+
+        $id = $request->getCookieParams()[$name] ?? '';
+
+        session_id($id);
 
         // Start the session with options disabling cookies.
         if (session_start(self::SESSION_START_OPTIONS)) {
@@ -279,45 +282,22 @@ class SessionMiddleware implements MiddlewareInterface
     }
 
     /**
-     * Set the session cookie options from the given array of options.
+     * Set the given session cookie params.
      *
-     * @param array $options
+     * @param array $cookie_params
      * @return void
      */
-    public function setCookieOptions(array $options)
+    private function setCookieParams(array $cookie_params)
     {
-        $config = session_get_cookie_params();
-
-        $options = array_change_key_case($options);
-
-        foreach ($options as $key => $value) {
-
-            $config[$key] = $value;
-
-        }
+        $params = array_merge(session_get_cookie_params(), array_change_key_case($cookie_params));
 
         session_set_cookie_params(
-            $config['lifetime'],
-            $config['path'],
-            $config['domain'],
-            $config['secure'],
-            $config['httponly']
+            $params['lifetime'],
+            $params['path'],
+            $params['domain'],
+            $params['secure'],
+            $params['httponly']
         );
-    }
-
-    /**
-     * Extract the session cookie from the given request.
-     *
-     * @param \Psr\Http\Message\ServerRequestInterface $request
-     * @return string
-     */
-    private function extractSessionId(ServerRequestInterface $request): string
-    {
-        $name = session_name();
-
-        $cookies = $request->getCookieParams();
-
-        return $cookies[$name] ?? '';
     }
 
     /**
@@ -336,8 +316,7 @@ class SessionMiddleware implements MiddlewareInterface
         $time = time();
 
         $response = $this->attachCacheLimiterHeader($response, $time);
-        $response = $this->attachCacheExpireHeader($response, $time);
-        $response = $this->attachSessionCoookie($response, $time);
+        $response = $this->attachSessionCookie($response, $time);
 
         return $response;
     }
@@ -356,10 +335,10 @@ class SessionMiddleware implements MiddlewareInterface
         switch ($cache_limiter) {
             case 'public':
                 return $this->attachPublicCacheLimiterHeader($response, $time);
-            case 'private_no_expire':
-                return $this->attachPrivateNoExpireCacheLimiterHeader($response, $time);
             case 'private':
                 return $this->attachPrivateCacheLimiterHeader($response, $time);
+            case 'private_no_expire':
+                return $this->attachPrivateNoExpireCacheLimiterHeader($response, $time);
             case 'nocache':
                 return $this->attachNocacheCacheLimiterHeader($response);
             default:
@@ -382,33 +361,11 @@ class SessionMiddleware implements MiddlewareInterface
 
         $max_age = $cache_expire * 60;
         $expires = gmdate(self::DATE_FORMAT, $time + $max_age);
-        $cache_control = "public, max-age={$maxAge}";
+        $cache_control = "public, max-age={$max_age}";
         $last_modified = gmdate(self::DATE_FORMAT, $time);
 
         return $response
             ->withAddedHeader('Expires', $expires)
-            ->withAddedHeader('Cache-Control', $cache_control)
-            ->withAddedHeader('Last-Modified', $last_modified);
-    }
-
-    /**
-     * Attach a private no expire cache limiter header to the given response.
-     *
-     * @param \Psr\Http\Message\ResponseInterface   $response
-     * @param int                                   $time
-     * @return \Psr\Http\Message\ResponseInterface
-     *
-     * @see https://github.com/php/php-src/blob/PHP-7.0/ext/session/session.c#L1286-L1295
-     */
-    private function attachPrivateNoExpireCacheLimiterHeader(ResponseInterface $response, int $time): ResponseInterface
-    {
-        $cache_expire = session_cache_expire();
-
-        $maxAge = $cache_expire * 60;
-        $cache_control = "private, max-age={$maxAge}, pre-check={$maxAge}";
-        $last_modified = $this->timestamp();
-
-        return $response
             ->withAddedHeader('Cache-Control', $cache_control)
             ->withAddedHeader('Last-Modified', $last_modified);
     }
@@ -430,7 +387,29 @@ class SessionMiddleware implements MiddlewareInterface
     }
 
     /**
-     * Attach a no cache cache limiter header to the given response.
+     * Attach a private_no_expire cache limiter header to the given response.
+     *
+     * @param \Psr\Http\Message\ResponseInterface   $response
+     * @param int                                   $time
+     * @return \Psr\Http\Message\ResponseInterface
+     *
+     * @see https://github.com/php/php-src/blob/PHP-7.0/ext/session/session.c#L1286-L1295
+     */
+    private function attachPrivateNoExpireCacheLimiterHeader(ResponseInterface $response, int $time): ResponseInterface
+    {
+        $cache_expire = session_cache_expire();
+
+        $max_age = $cache_expire * 60;
+        $cache_control = "private, max-age={$max_age}";
+        $last_modified = gmdate(self::DATE_FORMAT, $time);
+
+        return $response
+            ->withAddedHeader('Cache-Control', $cache_control)
+            ->withAddedHeader('Last-Modified', $last_modified);
+    }
+
+    /**
+     * Attach a nocache cache limiter header to the given response.
      *
      * @param \Psr\Http\Message\ResponseInterface $response
      * @return \Psr\Http\Message\ResponseInterface
@@ -472,10 +451,10 @@ class SessionMiddleware implements MiddlewareInterface
 
         }
 
+        if ($options['path']) $header .= "; path={$options['path']}";
         if ($options['domain']) $header .= "; domain={$options['domain']}";
-        if ($options['path']) $cookie .= "; path={$options['path']}";
-        if ($options['secure']) $cookie .= '; secure';
-        if ($options['httponly']) $cookie .= '; httponly';
+        if ($options['secure']) $header .= '; secure';
+        if ($options['httponly']) $header .= '; httponly';
 
         // Return a new response with the cookie header.
         return $response->withAddedHeader('set-cookie', $header);

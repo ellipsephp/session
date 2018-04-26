@@ -28,7 +28,8 @@
     },
     "require-dev": {
         "kahlan/kahlan": "^4.0",
-        "eloquent/phony-kahlan": "^1.0"
+        "eloquent/phony-kahlan": "^1.0",
+        "zendframework/zend-diactoros": "^1.7"
     },
     "autoload": {
         "psr-4": {
